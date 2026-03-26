@@ -1,8 +1,22 @@
+
+Simeon Adjei <simeonadjei12015@gmail.com>
+3:11 AM (2 minutes ago)
+to me
+
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
       "source": "/(.*)",
       "destination": "https://script.google.com/macros/s/AKfycbywG3WFQYtsrixlYXOe-O_sMSllbe4kGMMu8BUTNtJmVczfXE7fps_5GT26iMVtH16A/exec/$1"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {"key": "x-vercel-enable-rewrite-caching", "value": "1"}
+      ]
     }
   ]
 }
