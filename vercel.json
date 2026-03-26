@@ -1,8 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "https://script.google.com/u/0/home/projects/14img62GYpYAJxdQM3dxCMudsF2zkRqYbKw6RGdeiGRr__k5sR07hznvu/exec/$1"
-    }
-  ]
