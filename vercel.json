@@ -3,12 +3,18 @@
   "version": 2,
   "builds": [
     {
-      "src": "public/**",
+      "src": "kshtsplcattendance/**/*.{html,css,js}",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
+      "src": "/",
+      "dest": "/kshtsplcattendance/Admin.html"
+    },
+    {
       "src": "/(.*)",
-      "dest": "public/index.html"
+      "dest": "/kshtsplcattendance/$1"
     }
+  ]
+}
