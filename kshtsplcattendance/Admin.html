@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{font-family:Arial;background:#eef2f3;margin:0;}
+.container{max-width:1100px;margin:auto;background:white;padding:30px;border-radius:12px;margin-top:30px;}
+h2,h3{text-align:center;}
+input,button{width:100%;padding:14px;margin-top:12px;font-size:16px;}
+button{background:#1b5e20;color:white;border:none;cursor:pointer;}
+#adminCode {width: 50%}
+button{background:#1b5e20;color:white;border:none;cursor:pointer;}
+button:hover{opacity:0.9;}
+.success{color:green;font-weight:bold;margin-top:10px;}
+.error{color:red;font-weight:bold;margin-top:10px;}
+.settings-panel{background:#f5f5f5;padding:15px;border-radius:8px;margin:20px 0;}
+.downloading{display:none;color:yellow;font-style:italic;}
+.control-buttons button{margin-top:10px;}
+
+.spinner-container {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px;
+  background: #1b5e20;
+  border-radius: 6px;
+  margin-top: 10px;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div id="loginPanel">
+  <h3>KSHTS PLC Admin</h3>
+  <input id="adminCode" type="password" placeholder="Enter admin code">
+  <button onclick="login()">Login</button>
+  <div id="loginMsg"></div>
+</div>
+
+<div id="panel" style="display:none;">
+  <!-- STATS DISPLAY -->
+  <div id="msg"></div>
+  <div id="stats"></div>
+  <div id="absent"></div>
+
+  <!-- PDF SETTINGS - MOVED TO BOTTOM -->
+  <div class="settings-panel">
+    <h3>📄 PDF Report Settings</h3>
+    <input id="schoolName" type="text" placeholder="School Name (KSHTS PLC)" value="KSHTS PLC">
+    <input id="topic" type="text" placeholder="Topic/Meeting Name">
+    <div class="control-buttons">
+      <button onclick="generateHistoricalPDF('Attendance')">📅 Historical Attendance PDF</button>
+      <button onclick="generateHistoricalPDF('Absentee')">📅 Historical Absentee PDF</button>
+    </div>
+    <div id="pdfMsg"></div>
+  </div>
+
+  <!-- CONTROL BUTTONS - MOVED TO BOTTOM -->
+  <div class="control-buttons">
+    <button onclick="generateCode()">Generate Code</button>
+    <button onclick="openSession()">Open Session</button>
+    <button onclick="closeSession()">Close Session</button>
+  </div>
+</div>
+
+<script>
+let isAdmin = false;
+
+function login() {
+  const code = document.getElementById('adminCode').value;
+  document.getElementById('loginMsg').innerHTML = '<div class="downloading">Checking code...</div>';
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      const msg = document.getElementById('loginMsg');
+      if (result) {
+        isAdmin = true;
+        document.getElementById('loginPanel').style.display = 'none';
+        document.getElementById('panel').style.display = 'block';
+        loadStats();
+        msg.innerHTML = '<div class="success">Login successful! KSHTS2026</div>';
+      } else {
+        msg.innerHTML = '<div class="error">Wrong code. Try KSHTS2026</div>';
+      }
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('loginMsg').innerHTML = '<div class="error">Error: ' + err.message + '</div>';
+    })
+    .adminLogin(code);
+}
+
+function generateCode() {
+  google.script.run
+    .withSuccessHandler(code => {
+      document.getElementById('msg').innerHTML = `<div class="success">Daily Code: <strong>${code}</strong></div>`;
+    })
+    .generateCode();
+}
+
+function openSession() {
+  google.script.run
+    .withSuccessHandler(() => {
+      document.getElementById('msg').innerHTML = '<div class="success">Session OPENED</div>';
+    })
+    .openSession();
+}
+
+function closeSession() {
+  google.script.run
+    .withSuccessHandler(() => {
+      document.getElementById('msg').innerHTML = '<div class="success">Session CLOSED</div>';
+    })
+    .closeSession();
+}
+
+function loadStats() {
+  google.script.run
+    .withSuccessHandler(displayStats)
+    .getStats();
+}
+
+function displayStats(stats) {
+  document.getElementById('stats').innerHTML = `
+    Present: ${stats.present}/${stats.total} (${stats.percent}%) |
+    Males: ${stats.malePresent}/${stats.totalMale} | Females: ${stats.femalePresent}/${stats.totalFemale}
+  `;
+
+  const absentHtml = `
+    <h4>Absent (${stats.absentList.length}):</h4>
+    <ul>${stats.absentList.map(t => `<li>${t.name} (${t.gender}, ${t.department})</li>`).join('')}</ul>
+  `;
+  document.getElementById('absent').innerHTML = absentHtml;
+}
+
+// NEW SPINNER FUNCTIONS
+function showSpinner(elementId) {
+  const el = document.getElementById(elementId);
+  el.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+}
+
+function hideSpinner(elementId) {
+  const el = document.getElementById(elementId);
+  el.innerHTML = '';
+}
+
+function downloadPDF(base64, filename) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  const blob = new Blob([bytes], {type: 'application/pdf'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// FIXED HISTORICAL PDF FUNCTION
+function generateHistoricalPDF(type) {
+  const schoolName = document.getElementById('schoolName').value;
+  const topic = document.getElementById('topic').value || 'PLC Meeting';
+  const dateStr = prompt('Enter date (YYYY-MM-DD):', new Date().toISOString().slice(0,10));
+
+  if (!dateStr) return;
+
+  const typeLower = type.toLowerCase();
+
+  showSpinner('pdfMsg');
+  google.script.run
+    .withSuccessHandler(base64 => {
+      hideSpinner('pdfMsg');
+      const filename = typeLower === 'attendance' ? 
+        `KSHTS_attendance_${dateStr}.pdf` : 
+        `KSHTS_absentee_${dateStr}.pdf`;
+      downloadPDF(base64, filename);
+    })
+    .withFailureHandler(err => {
+      hideSpinner('pdfMsg');
+      document.getElementById('pdfMsg').innerHTML = '<div class="error">Error: ' + err.message + '</div>';
+      console.error('PDF Error:', err);
+    })
+    [typeLower === 'attendance' ? 'getAttendancePDFHistorical' : 'getAbsenteePDFHistorical'](schoolName, topic, dateStr);
+}
+</script>
+</body>
+</html>
