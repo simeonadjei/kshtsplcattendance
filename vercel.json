@@ -3,7 +3,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "kshtsplcattendance/**/*.{html,css,js}",
+      "src": "kshtsplcattendance/**/*.{html,css,js,png,ico,svg,woff,woff2,ttf,eot,webp,jpg,jpeg,gif}",
       "use": "@vercel/static"
     }
   ],
